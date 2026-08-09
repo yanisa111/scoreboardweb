@@ -9966,11 +9966,12 @@ ZA:function ZA(a){this.a=a},
 aJ0(){return new A.Ke(new A.a6t(),A.r(t.K,t.Qu))},
 agq:function agq(a,b){this.a=a
 this.b=b},
-zd:function zd(a,b,c,d){var _=this
+zd:function zd(a,b,c,d,e){var _=this
 _.e=a
-_.db=b
-_.R8=c
-_.a=d},
+_.cx=b
+_.db=c
+_.R8=d
+_.a=e},
 a6t:function a6t(){},
 a8D:function a8D(){},
 DU:function DU(){this.d=$
@@ -46929,14 +46930,15 @@ j.a.toString
 s=A.a1_(k,l,i,i,m)
 k=A.awE(new A.AG(s,i),B.a4,o,B.a5)
 return k},
-a2Q(a){var s,r=this,q=null,p=r.a,o=p.db
-o=o.dx
-s=o
+a2Q(a){var s,r,q=this,p=null,o=q.a,n=o.db
+n=n.dx
+s=n
 if(s==null)s=B.h9
-p=p.e
-o=r.gaa1()
-r.a.toString
-return new A.Ct(q,q,q,new A.alZ(),q,q,q,q,q,p,B.L1,q,q,q,B.IM,r.gaa8(),"",q,B.SX,s,q,o,q,q,B.nM,!1,!1,q,q,q,new A.oM(r,t.bT))},
+n=o.e
+o=o.cx
+r=q.gaa1()
+q.a.toString
+return new A.Ct(p,p,p,new A.alZ(),p,p,p,p,p,n,B.L1,p,p,p,B.IM,q.gaa8(),o,p,B.SX,s,p,r,p,p,B.nM,!1,!1,p,p,p,new A.oM(q,t.bT))},
 N(a){var s,r=this.a2Q(a)
 this.a.toString
 s=this.d
@@ -85795,7 +85797,7 @@ this.c.$0()},
 $S:0}
 A.Lr.prototype={
 N(a){var s=null
-return new A.zd(B.FP,A.n9(s,s,A.aQP().$0(),s),!1,s)}}
+return new A.zd(B.FP,"Scoreboardweb",A.n9(s,s,A.aQP().$0(),s),!1,s)}}
 A.pk.prototype={
 cs(a){var s=a.a,r=this.a,q=s[8]
 r.$flags&2&&A.an(r)
