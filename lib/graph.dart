@@ -5,7 +5,7 @@ import 'dart:math';
 class TeamData {
   String id;
   String name;
-  List<String> scores; // 🎯 ปรับให้ตรงกับฟังก์ชัน score ที่ใช้งานแบบ List
+  List<String> scores;
   Color color;
 
   TeamData({
@@ -60,7 +60,6 @@ Widget graph({
       double barMaxHeight = isMobile ? 200.0 : 420.0;
       double barWidth = isMobile ? 25.0 : 40.0;
 
-      // 🎯 ความกว้างของบล็อกข้อความ/ชื่อทีม
       double labelBoxWidth = barWidth + (isMobile ? 24.0 : 30.0);
 
       return Container(
@@ -82,7 +81,6 @@ Widget graph({
             LayoutBuilder(
               builder: (context, innerConstraints) {
                 double availableWidth = innerConstraints.maxWidth - (dynamicPadding * 2);
-                
                 double minSpacing = 70.0; 
                 
                 double minRequiredWidth = (labelBoxWidth * teams.length) + (minSpacing * teams.length);
@@ -191,7 +189,6 @@ Widget graph({
 }
 
 // === ฟังก์ชันแยก: ส่วนกรอกตารางคะแนน ===
-// === ฟังก์ชันแยก: ส่วนกรอกตารางคะแนน ===
 Widget score({
   required List<TeamData> teams,
   required int roundCount,
@@ -199,7 +196,7 @@ Widget score({
   required Color textColor,
   required VoidCallback onUpdate,
   required VoidCallback onAddRound,
-  required VoidCallback onDeleteRound, // 🎯 เพิ่ม callback สำหรับลบรอบ
+  required VoidCallback onDeleteRound,
 }) {
   final ScrollController tableScrollController = ScrollController();
 
@@ -282,22 +279,16 @@ Widget score({
                               const DataColumn(label: Text('Team')),
                               for (int i = 0; i < roundCount; i++)
                                 DataColumn(label: Text('Round ${i + 1}')),
-                              
-                              // 🎯 1. เพิ่มคอลัมน์แสดงคะแนนรวม
-                              const DataColumn(
-                                label: Text(
-                                  'Total',
-                                  style: TextStyle(color: Color.fromARGB(255, 255, 255, 255)),
-                                ),
-                              ),
-                              
-                              const DataColumn(label: Text('Delete')),
+                              const DataColumn(label: Text('Total')),
+                              const DataColumn(label: Text('Action')),
                             ],
                             rows: List<DataRow>.generate(teams.length, (index) {
                               final team = teams[index];
+                              
                               return DataRow(
                                 key: ValueKey(team.id),
                                 cells: [
+                                  // 1. ปุ่มวงกลมเลือกสี
                                   DataCell(
                                     GestureDetector(
                                       onTap: () {
@@ -326,6 +317,8 @@ Widget score({
                                       ),
                                     ),
                                   ),
+
+                                  // 2. ชื่อทีม (สีตามธีม)
                                   DataCell(
                                     SizedBox(
                                       width: nameFieldWidth,
@@ -335,6 +328,7 @@ Widget score({
                                         style: TextStyle(
                                           fontSize: isMobile ? 13 : 14,
                                           color: textColor,
+                                          fontWeight: FontWeight.bold,
                                         ),
                                         decoration: const InputDecoration(
                                           border: InputBorder.none,
@@ -347,6 +341,8 @@ Widget score({
                                       ),
                                     ),
                                   ),
+
+                                  // 3. ช่องกรอกคะแนนแต่ละรอบ (สีตามธีม)
                                   for (int i = 0; i < roundCount; i++)
                                     DataCell(
                                       SizedBox(
@@ -358,6 +354,7 @@ Widget score({
                                           style: TextStyle(
                                             fontSize: isMobile ? 13 : 14,
                                             color: textColor,
+                                            fontWeight: FontWeight.w600,
                                           ),
                                           decoration: InputDecoration(
                                             hintText: '0',
@@ -377,8 +374,8 @@ Widget score({
                                         ),
                                       ),
                                     ),
-                                  
-                                  // 🎯 2. แสดงผลรวมคะแนนของแต่ละทีม
+
+                                  // 4. แสดงผลรวมคะแนน (สีตามธีม)
                                   DataCell(
                                     Text(
                                       team.totalScore % 1 == 0
@@ -387,11 +384,12 @@ Widget score({
                                       style: TextStyle(
                                         fontWeight: FontWeight.bold,
                                         fontSize: isMobile ? 13 : 15,
-                                        color: const Color.fromARGB(255, 255, 255, 255),
+                                        color: textColor,
                                       ),
                                     ),
                                   ),
 
+                                  // 5. ปุ่มลบทีม
                                   DataCell(
                                     SizedBox(
                                       width: isMobile ? 35 : 50,
@@ -484,7 +482,7 @@ Widget score({
                   ),
                 ),
 
-                // 🎯 3. เพิ่มปุ่ม Delete Round
+                // ปุ่ม Remove Round
                 ElevatedButton.icon(
                   onPressed: roundCount > 0 ? onDeleteRound : null,
                   icon: Icon(Icons.delete_sweep, color: Colors.white, size: isMobile ? 18 : 24),
