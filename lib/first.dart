@@ -187,6 +187,22 @@ class _FirstState extends State<First> {
     };
   }
 
+  // 🎯 ฟังก์ชันลบรอบล่าสุด พร้อมสั่งอัปเดต State และซิงค์ไปยังแท็บอื่น
+  void handleRemoveRound() {
+    if (roundCount > 0) {
+      setState(() {
+        roundCount--;
+        // ลบคะแนนรอบสุดท้ายของทุกทีมออก
+        for (var team in teams) {
+          if (team.scores.length > roundCount) {
+            team.scores.removeLast();
+          }
+        }
+      });
+      updateState(); // ซิงค์ไปยัง LocalStorage และแท็บอื่นๆ
+    }
+  }
+
   // 🔄 อัปเดตหน้าจอหลักพร้อมส่งสัญญาณบอกแท็บอื่นให้เปลี่ยนตามแบบ Realtime
   void updateState() {
     setState(() {});
@@ -517,11 +533,12 @@ class _FirstState extends State<First> {
                                   const SizedBox(height: 10),
                                   score(
                                     teams: teams,
-                                    roundCount: roundCount, // 🎯 ส่งจำนวนรอบปัจจุบัน
+                                    roundCount: roundCount,
                                     decoration: cardDecorations[currentCardBgIndex],
                                     textColor: contentTextColor,
                                     onUpdate: updateState,
-                                    onAddRound: _addNewRound, // 🎯 ส่งฟังก์ชันเพิ่มรอบ
+                                    onAddRound: _addNewRound,
+                                    onDeleteRound: handleRemoveRound,
                                   ),
                                 ] else if (selectedIndex == 1) ...[
                                   graph(
@@ -532,11 +549,12 @@ class _FirstState extends State<First> {
                                 ] else if (selectedIndex == 2) ...[
                                   score(
                                     teams: teams,
-                                    roundCount: roundCount, // 🎯 ส่งจำนวนรอบปัจจุบัน
+                                    roundCount: roundCount,
                                     decoration: cardDecorations[currentCardBgIndex],
                                     textColor: contentTextColor,
                                     onUpdate: updateState,
-                                    onAddRound: _addNewRound, // 🎯 ส่งฟังก์ชันเพิ่มรอบ
+                                    onAddRound: _addNewRound,
+                                    onDeleteRound: handleRemoveRound,
                                   ),
                                 ] else if (selectedIndex == 3) ...[
                                   if (isDesktop)
@@ -547,11 +565,12 @@ class _FirstState extends State<First> {
                                           flex: 1,
                                           child: score(
                                             teams: teams,
-                                            roundCount: roundCount, // 🎯 ส่งจำนวนรอบปัจจุบัน
+                                            roundCount: roundCount,
                                             decoration: cardDecorations[currentCardBgIndex],
                                             textColor: contentTextColor,
                                             onUpdate: updateState,
-                                            onAddRound: _addNewRound, // 🎯 ส่งฟังก์ชันเพิ่มรอบ
+                                            onAddRound: _addNewRound,
+                                            onDeleteRound: handleRemoveRound,
                                           ),
                                         ),
                                         const SizedBox(width: 20),
@@ -570,11 +589,12 @@ class _FirstState extends State<First> {
                                       children: [
                                         score(
                                           teams: teams,
-                                          roundCount: roundCount, // 🎯 ส่งจำนวนรอบปัจจุบัน
+                                          roundCount: roundCount,
                                           decoration: cardDecorations[currentCardBgIndex],
                                           textColor: contentTextColor,
                                           onUpdate: updateState,
-                                          onAddRound: _addNewRound, // 🎯 ส่งฟังก์ชันเพิ่มรอบ
+                                          onAddRound: _addNewRound,
+                                          onDeleteRound: handleRemoveRound,
                                         ),
                                         const SizedBox(height: 20),
                                         graph(

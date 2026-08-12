@@ -199,8 +199,8 @@ Widget score({
   required Color textColor,
   required VoidCallback onUpdate,
   required VoidCallback onAddRound,
+  required VoidCallback onDeleteRound, // 🎯 เพิ่ม callback สำหรับลบรอบ
 }) {
-  // 🎯 สร้าง ScrollController สำหรับตาราง
   final ScrollController tableScrollController = ScrollController();
 
   return LayoutBuilder(
@@ -252,7 +252,6 @@ Widget score({
                     ),
                   )
                 : Scrollbar(
-                    // 🎯 ใส่ Scrollbar ครอบ SingleChildScrollView
                     controller: tableScrollController,
                     thumbVisibility: true,
                     trackVisibility: true,
@@ -263,7 +262,7 @@ Widget score({
                       scrollDirection: Axis.horizontal,
                       physics: const BouncingScrollPhysics(),
                       child: Padding(
-                        padding: const EdgeInsets.only(bottom: 12.0), // เว้นระยะห่างด้านล่างไม่ให้แถบ Scrollbar ทับตาราง
+                        padding: const EdgeInsets.only(bottom: 12.0),
                         child: Theme(
                           data: ThemeData(
                             textTheme: TextTheme(
@@ -283,6 +282,15 @@ Widget score({
                               const DataColumn(label: Text('Team')),
                               for (int i = 0; i < roundCount; i++)
                                 DataColumn(label: Text('Round ${i + 1}')),
+                              
+                              // 🎯 1. เพิ่มคอลัมน์แสดงคะแนนรวม
+                              const DataColumn(
+                                label: Text(
+                                  'Total',
+                                  style: TextStyle(color: Color.fromARGB(255, 255, 255, 255)),
+                                ),
+                              ),
+                              
                               const DataColumn(label: Text('Delete')),
                             ],
                             rows: List<DataRow>.generate(teams.length, (index) {
@@ -369,6 +377,21 @@ Widget score({
                                         ),
                                       ),
                                     ),
+                                  
+                                  // 🎯 2. แสดงผลรวมคะแนนของแต่ละทีม
+                                  DataCell(
+                                    Text(
+                                      team.totalScore % 1 == 0
+                                          ? team.totalScore.toInt().toString()
+                                          : team.totalScore.toStringAsFixed(1),
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: isMobile ? 13 : 15,
+                                        color: const Color.fromARGB(255, 255, 255, 255),
+                                      ),
+                                    ),
+                                  ),
+
                                   DataCell(
                                     SizedBox(
                                       width: isMobile ? 35 : 50,
@@ -400,6 +423,7 @@ Widget score({
               runSpacing: 10,
               alignment: WrapAlignment.center,
               children: [
+                // ปุ่ม Add New Team
                 ElevatedButton.icon(
                   onPressed: () {
                     final randomColor = pastelColors[Random().nextInt(pastelColors.length)];
@@ -434,6 +458,8 @@ Widget score({
                     elevation: 0,
                   ),
                 ),
+                
+                // ปุ่ม Add Round
                 ElevatedButton.icon(
                   onPressed: onAddRound,
                   icon: Icon(Icons.add_chart, color: Colors.white, size: isMobile ? 18 : 24),
@@ -447,6 +473,32 @@ Widget score({
                   ),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.teal.shade300,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(isMobile ? 10 : 15),
+                    ),
+                    padding: EdgeInsets.symmetric(
+                      horizontal: isMobile ? 16 : 24, 
+                      vertical: isMobile ? 10 : 15,
+                    ),
+                    elevation: 0,
+                  ),
+                ),
+
+                // 🎯 3. เพิ่มปุ่ม Delete Round
+                ElevatedButton.icon(
+                  onPressed: roundCount > 0 ? onDeleteRound : null,
+                  icon: Icon(Icons.delete_sweep, color: Colors.white, size: isMobile ? 18 : 24),
+                  label: Text(
+                    "Remove Round",
+                    style: TextStyle(
+                      color: Colors.white, 
+                      fontWeight: FontWeight.bold,
+                      fontSize: isMobile ? 13 : 14,
+                    ),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.red.shade300,
+                    disabledBackgroundColor: Colors.grey.shade400,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(isMobile ? 10 : 15),
                     ),
