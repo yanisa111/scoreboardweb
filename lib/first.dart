@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:universal_html/html.dart' as html;
 import 'graph.dart';
 import 'leaderboard_page.dart';
+import 'app_drawer.dart';
 
 class First extends StatefulWidget {
   final int initialIndex;
@@ -19,16 +20,20 @@ class _FirstState extends State<First> {
   int roundCount = 1;
   int selectedIndex = 0;
 
-  // Stream Subscriptions สำหรับจัดการยกเลิก Listener ใน dispose()
   StreamSubscription<html.StorageEvent>? _storageSubscription;
   StreamSubscription<html.MessageEvent>? _messageSubscription;
 
+  // --- Background State ---
   final List<String> mainBackgrounds = List.generate(
     17,
     (index) => 'bg/${index + 1}.jpg',
   );
+  List<String> customBackgrounds = [];
   int currentMainBgIndex = 0;
+  int currentCustomBgIndex = -1;
+  bool isCustomBgSelected = false;
 
+  // --- Container Theme State ---
   final List<Decoration> cardDecorations = [
     BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20)),
     BoxDecoration(
@@ -64,14 +69,20 @@ class _FirstState extends State<First> {
     ),
   ];
   int currentCardBgIndex = 0;
+  bool isCustomThemeSelected = false;
+  Color customContainerColor = Colors.white;
+  Color customTextColor = Colors.black87;
+
+  // --- Font Customization State ---
+  String selectedFontFamily = 'Default';
+  double fontSizeScale = 1.0;
 
   @override
   void initState() {
     super.initState();
-    selectedIndex = widget.initialIndex; // กำหนดค่าเริ่มต้นตามที่ส่งมาจาก Drawer
+    selectedIndex = widget.initialIndex;
     _loadTeamsFromStorage();
 
-    // ดักฟังเหตุการณ์การแก้ไขข้อมูลข้ามแท็บ
     _storageSubscription = html.window.onStorage.listen((html.StorageEvent event) {
       if (event.key == 'scoreboard_teams_data' && event.newValue != null) {
         _parseAndStoreTeams(event.newValue!);
@@ -96,10 +107,34 @@ class _FirstState extends State<First> {
 
   @override
   void dispose() {
-    // ป้องกัน Memory Leak
     _storageSubscription?.cancel();
     _messageSubscription?.cancel();
     super.dispose();
+  }
+
+  // ฟังก์ชั่นอัปโหลดรูปภาพพื้นหลัง
+  void _uploadBackgroundFile() {
+    final uploadInput = html.FileUploadInputElement();
+    uploadInput.accept = 'image/*';
+    uploadInput.click();
+
+    uploadInput.onChange.listen((e) {
+      final files = uploadInput.files;
+      if (files != null && files.isNotEmpty) {
+        final file = files[0];
+        final reader = html.FileReader();
+        reader.readAsDataUrl(file);
+        reader.onLoadEnd.listen((e) {
+          if (reader.result != null) {
+            setState(() {
+              customBackgrounds.add(reader.result as String);
+              isCustomBgSelected = true;
+              currentCustomBgIndex = customBackgrounds.length - 1;
+            });
+          }
+        });
+      }
+    });
   }
 
   void _loadTeamsFromStorage() {
@@ -249,19 +284,52 @@ class _FirstState extends State<First> {
 
   @override
   Widget build(BuildContext context) {
-    bool isDarkCard = currentCardBgIndex == 2;
-    Color contentTextColor = isDarkCard ? Colors.white : Colors.black87;
+    // การเลือก Theme และ สีตัวอักษร
+    Decoration currentDecoration;
+    Color contentTextColor;
+
+    if (isCustomThemeSelected) {
+      currentDecoration = BoxDecoration(
+        color: customContainerColor,
+        borderRadius: BorderRadius.circular(20),
+      );
+      contentTextColor = customTextColor;
+    } else {
+      currentDecoration = cardDecorations[currentCardBgIndex];
+      bool isDarkCard = currentCardBgIndex == 2;
+      contentTextColor = isDarkCard ? Colors.white : Colors.black87;
+    }
 
     final screenWidth = MediaQuery.of(context).size.width;
     final bool isMobile = screenWidth < 600;
     final bool isTablet = screenWidth >= 600 && screenWidth < 1024;
     final bool isDesktop = screenWidth >= 1024;
 
+    // เลือกใช้ Font Style ที่กำหนด
+    TextStyle baseTextStyle = TextStyle(
+      fontFamily: selectedFontFamily == 'Default' ? null : selectedFontFamily,
+    );
+
+    // หน้า Leaderboard Page (index 4)
+    if (selectedIndex == 4) {
+      return Scaffold(
+        drawer: _buildAppDrawer(),
+        body: LeaderboardContent(
+          mainBackgroundPath: !isCustomBgSelected ? mainBackgrounds[currentMainBgIndex] : null,
+          customBackgroundUrl: isCustomBgSelected ? customBackgrounds[currentCustomBgIndex] : null,
+          cardDecoration: currentDecoration,
+          textColor: contentTextColor,
+          fontFamily: selectedFontFamily,
+          fontSizeScale: fontSizeScale,
+        ),
+      );
+    }
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
+        title: Text(
           "Scoreboard Studio",
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+          style: baseTextStyle.copyWith(fontWeight: FontWeight.bold, fontSize: 18 * fontSizeScale),
         ),
         backgroundColor: Colors.white.withValues(alpha: 0.5),
         elevation: 0,
@@ -276,24 +344,27 @@ class _FirstState extends State<First> {
           else
             TextButton.icon(
               icon: const Icon(Icons.open_in_new_rounded, size: 18),
-              label: const Text("Open Graph View ↗️"),
+              label: Text("Open Graph View ↗️", style: baseTextStyle),
               onPressed: _openGraphView,
             ),
           const SizedBox(width: 10),
         ],
       ),
-      drawer: _buildDrawer(),
+      drawer: _buildAppDrawer(),
       body: Stack(
         children: [
+          // พื้นหลัง
           AnimatedSwitcher(
             duration: const Duration(milliseconds: 500),
             child: Container(
-              key: ValueKey<int>(currentMainBgIndex),
+              key: ValueKey<String>(isCustomBgSelected ? customBackgrounds[currentCustomBgIndex] : mainBackgrounds[currentMainBgIndex]),
               width: double.infinity,
               height: double.infinity,
               decoration: BoxDecoration(
                 image: DecorationImage(
-                  image: AssetImage(mainBackgrounds[currentMainBgIndex]),
+                  image: isCustomBgSelected
+                      ? NetworkImage(customBackgrounds[currentCustomBgIndex]) as ImageProvider
+                      : AssetImage(mainBackgrounds[currentMainBgIndex]),
                   fit: BoxFit.cover,
                 ),
               ),
@@ -311,9 +382,17 @@ class _FirstState extends State<First> {
                       const SizedBox(height: 20),
                       ConstrainedBox(
                         constraints: const BoxConstraints(maxWidth: 1500),
-                        child: _buildMainContent(
-                          isDesktop: isDesktop,
-                          textColor: contentTextColor,
+                        child: Theme(
+                          data: Theme.of(context).copyWith(
+                            textTheme: Theme.of(context).textTheme.apply(
+                                  fontFamily: selectedFontFamily == 'Default' ? null : selectedFontFamily,
+                                ),
+                          ),
+                          child: _buildMainContent(
+                            isDesktop: isDesktop,
+                            textColor: contentTextColor,
+                            decoration: currentDecoration,
+                          ),
                         ),
                       ),
                       const SizedBox(height: 30),
@@ -328,23 +407,82 @@ class _FirstState extends State<First> {
     );
   }
 
-  Widget _buildMainContent({required bool isDesktop, required Color textColor}) {
-    final currentDecoration = cardDecorations[currentCardBgIndex];
+  AppDrawer _buildAppDrawer() {
+    return AppDrawer(
+      selectedIndex: selectedIndex,
+      onSelectIndex: (idx) => setState(() => selectedIndex = idx),
+      mainBackgrounds: mainBackgrounds,
+      customBackgrounds: customBackgrounds,
+      currentMainBgIndex: currentMainBgIndex,
+      isCustomBgSelected: isCustomBgSelected,
+      currentCustomBgIndex: currentCustomBgIndex,
+      onSelectMainBg: (idx) => setState(() {
+        isCustomBgSelected = false;
+        currentMainBgIndex = idx;
+      }),
+      onSelectCustomBg: (idx) => setState(() {
+        isCustomBgSelected = true;
+        currentCustomBgIndex = idx;
+      }),
+      onUploadBackground: _uploadBackgroundFile,
+      cardDecorations: cardDecorations,
+      onDeleteCustomBg: (idx) => setState(() {
+        if (idx >= 0 && idx < customBackgrounds.length) {
+          customBackgrounds.removeAt(idx);
+          if (customBackgrounds.isEmpty) {
+            isCustomBgSelected = false;
+            currentCustomBgIndex = -1;
+          } else if (currentCustomBgIndex >= customBackgrounds.length) {
+            currentCustomBgIndex = customBackgrounds.length - 1;
+          }
+        }
+      }),
+      currentCardBgIndex: currentCardBgIndex,
+      onSelectCardBg: (idx) => setState(() {
+        isCustomThemeSelected = false;
+        currentCardBgIndex = idx;
+      }),
+      customContainerColor: customContainerColor,
+      customTextColor: customTextColor,
+      isCustomThemeSelected: isCustomThemeSelected,
+      onCustomThemeChanged: (containerCol, textCol) {
+        setState(() {
+          isCustomThemeSelected = true;
+          customContainerColor = containerCol;
+          customTextColor = textCol;
+        });
+      },
+      selectedFontFamily: selectedFontFamily,
+      fontSizeScale: fontSizeScale,
+      onFontFamilyChanged: (font) => setState(() => selectedFontFamily = font),
+      onFontSizeScaleChanged: (scale) => setState(() => fontSizeScale = scale),
+    );
+  }
 
-    Widget graphWidget = graph(
+Widget _buildMainContent({
+    required bool isDesktop,
+    required Color textColor,
+    required Decoration decoration,
+  }) {
+    // 🟢 แก้ไขจุดที่ 1: เปลี่ยนจาก graph(...) เป็นชื่อ Widget Class ใน graph.dart (เช่น ScoreGraphWidget หรือ ScoreGraph)
+    Widget graphWidget = ScoreGraphWidget(
       teams: teams,
-      decoration: currentDecoration,
+      decoration: decoration,
       textColor: textColor,
+      fontSizeScale: fontSizeScale
+      
     );
 
-    Widget scoreWidget = score(
+    // 🟢 แก้ไขจุดที่ 2: เปลี่ยนจาก score(...) เป็นชื่อ Widget Class ใน graph.dart (เช่น ScoreTableWidget หรือ ScoreTable)
+    Widget scoreWidget = ScoreTableWidget(
       teams: teams,
       roundCount: roundCount,
-      decoration: currentDecoration,
+      decoration: decoration,
       textColor: textColor,
       onUpdate: updateState,
       onAddRound: _addNewRound,
       onDeleteRound: handleRemoveRound,
+      fontSizeScale: fontSizeScale
     );
 
     switch (selectedIndex) {
@@ -380,199 +518,5 @@ class _FirstState extends State<First> {
           ],
         );
     }
-  }
-
-  Widget _buildDrawer() {
-    return Drawer(
-      child: ListView(
-        padding: EdgeInsets.zero,
-        children: [
-          DrawerHeader(
-            decoration: const BoxDecoration(
-              color: Color.fromARGB(255, 97, 151, 222),
-            ),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Icon(Icons.live_tv_rounded, size: 40, color: Colors.white),
-                const SizedBox(height: 10),
-                Text(
-                  "Studio Control Screen",
-                  style: TextStyle(
-                    color: Colors.white.withValues(alpha: 0.9),
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const Padding(
-            padding: EdgeInsets.only(left: 16, top: 10, bottom: 5),
-            child: Text(
-              "VIEW MODES",
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.bold,
-                color: Colors.black54,
-                letterSpacing: 1.2,
-              ),
-            ),
-          ),
-          ListTile(
-            leading: const Icon(Icons.dashboard_rounded),
-            title: const Text("Default (Dual View)"),
-            selected: selectedIndex == 0,
-            onTap: () {
-              setState(() => selectedIndex = 0);
-              Navigator.pop(context);
-            },
-          ),
-          ListTile(
-            leading: const Icon(Icons.bar_chart_rounded, color: Colors.redAccent),
-            title: const Text("🔴 Graph View Only (Live)"),
-            selected: selectedIndex == 1,
-            onTap: () {
-              setState(() => selectedIndex = 1);
-              Navigator.pop(context);
-            },
-          ),
-          ListTile(
-            leading: const Icon(Icons.table_rows_rounded, color: Colors.blueAccent),
-            title: const Text("Score Table Only (Backend)"),
-            selected: selectedIndex == 2,
-            onTap: () {
-              setState(() => selectedIndex = 2);
-              Navigator.pop(context);
-            },
-          ),
-          ListTile(
-            leading: const Icon(Icons.splitscreen_rounded, color: Colors.purpleAccent),
-            title: const Text("Dual Monitor Mode"),
-            selected: selectedIndex == 3,
-            onTap: () {
-              setState(() => selectedIndex = 3);
-              Navigator.pop(context);
-            },
-          ),
-          ListTile(
-            leading: const Icon(Icons.leaderboard),
-            title: const Text('เปิดหน้า Leaderboard Graph'),
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const LeaderboardPage()),
-              );
-            },
-          ),
-          const Divider(),
-          const Padding(
-            padding: EdgeInsets.only(left: 16, top: 10, bottom: 8),
-            child: Text(
-              "WEBSITE BACKGROUND",
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.bold,
-                color: Colors.black54,
-                letterSpacing: 1.2,
-              ),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 5),
-            child: Wrap(
-              spacing: 10,
-              runSpacing: 10,
-              children: List.generate(mainBackgrounds.length, (index) {
-                bool isSelected = currentMainBgIndex == index;
-                return GestureDetector(
-                  onTap: () => setState(() => currentMainBgIndex = index),
-                  child: Container(
-                    width: 78,
-                    height: 55,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(
-                        color: isSelected
-                            ? const Color.fromARGB(255, 97, 151, 222)
-                            : Colors.grey.shade300,
-                        width: isSelected ? 3 : 1,
-                      ),
-                      image: DecorationImage(
-                        image: AssetImage(mainBackgrounds[index]),
-                        fit: BoxFit.cover,
-                      ),
-                    ),
-                    child: isSelected
-                        ? const Center(
-                            child: Icon(
-                              Icons.check_circle,
-                              color: Colors.white,
-                              size: 20,
-                            ),
-                          )
-                        : null,
-                  ),
-                );
-              }),
-            ),
-          ),
-          const SizedBox(height: 10),
-          const Divider(),
-          const Padding(
-            padding: EdgeInsets.only(left: 16, top: 10, bottom: 8),
-            child: Text(
-              "GRAPH/TABLE CONTAINER THEME",
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.bold,
-                color: Colors.black54,
-                letterSpacing: 1.2,
-              ),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 5),
-            child: Wrap(
-              spacing: 12,
-              runSpacing: 10,
-              children: List.generate(cardDecorations.length, (index) {
-                bool isSelected = currentCardBgIndex == index;
-                return GestureDetector(
-                  onTap: () => setState(() => currentCardBgIndex = index),
-                  child: Container(
-                    width: 58,
-                    height: 58,
-                    decoration: cardDecorations[index],
-                    child: Container(
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(
-                          color: isSelected
-                              ? const Color.fromARGB(255, 97, 151, 222)
-                              : Colors.grey.shade400,
-                          width: isSelected ? 3 : 1,
-                        ),
-                      ),
-                      child: isSelected
-                          ? Center(
-                              child: Icon(
-                                Icons.check_circle,
-                                color: index == 2 ? Colors.white : Colors.black87,
-                                size: 18,
-                              ),
-                            )
-                          : null,
-                    ),
-                  ),
-                );
-              }),
-            ),
-          ),
-          const SizedBox(height: 20),
-        ],
-      ),
-    );
   }
 }
